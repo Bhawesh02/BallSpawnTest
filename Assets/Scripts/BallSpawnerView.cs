@@ -20,9 +20,16 @@ public class BallSpawnerView : MonoBehaviour
     private TextMeshProUGUI message;
     [SerializeField]
     private Button restart;
+
+    private float initalCircleScale = 0.25f;
+    private bool collidedWithWall ;
+    private float circleSpawnBuffer = 0.01f;
+    private void Awake()
+    {
+        collidedWithWall = false;
+    }
     private void Start()
     {
-        circleRadius = (Circle.bounds.size.x / 2f);
         StartCoroutine(SpawnCircles());
         restart.onClick.AddListener(() => {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
@@ -32,29 +39,34 @@ public class BallSpawnerView : MonoBehaviour
     private IEnumerator SpawnCircles()
     {
         yield return null;
+        SetCircleScale();
         Vector2 spawnPos = plane.transform.position;
         if (!CanSpawnCircle(spawnPos))
             yield break;
         SpawnCircleAtPos(spawnPos);
         spawnPos = GetNewSpawnPos(spawnPos);
-        int tested = 1;
-        while (tested <= maxTry && !CanSpawnCircle(spawnPos))
+        while (!CanSpawnCircle(spawnPos))
         {
-            if(tested == maxTry)
-            Debug.Log(tested);
+            if (collidedWithWall)
+                yield break;
             spawnPos = GetNewSpawnPos(spawnPos);
-            tested++;
+               
         }
-        if(tested > maxTry)
-            yield break;
         SpawnCircleAtPos(spawnPos);
         spawnPos.x = -spawnPos.x;
         SpawnCircleAtPos(spawnPos);
     }
 
+    private void SetCircleScale()
+    {
+        float newScale = (initalCircleScale * plane.ResizeScalePercentage);
+        Circle.transform.localScale=new(newScale, newScale);
+        circleRadius = (Circle.bounds.size.x / 2f);
+    }
+
     private Vector2 GetNewSpawnPos(Vector2 spawnPos)
     {
-        spawnPos.x += circleRadius*2;
+        spawnPos.x += (circleRadius*2 + circleSpawnBuffer);
         return spawnPos;
     }
 
@@ -67,9 +79,8 @@ public class BallSpawnerView : MonoBehaviour
         if (colliders.Length > 0)
         {
             for (int i = 0; i < colliders.Length; i++)
-            {
-                Debug.Log(colliders[i].gameObject.name);
-            }
+                if (colliders[i].gameObject.CompareTag("Wall"))
+                    collidedWithWall = true;
             return false;
         }
         return true;
